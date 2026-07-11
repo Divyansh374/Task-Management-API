@@ -30,7 +30,7 @@ const sendErrorDev = (err, res) => {
 };
 
 const sendErrorProd = (err, res) => {
-  // If erorr is operational then send message to client
+  // If error is operational then send message to client
   if (err.isOperational) {
     res.status(err.statusCode).json({
       status: err.status,

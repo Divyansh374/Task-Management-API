@@ -41,3 +41,29 @@ exports.getAllTasks = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+exports.getTask = catchAsync(async (req, res, next) => {
+  const taskId = req.params.id;
+  const userId = req.user._id;
+
+  const task = await Task.findById(taskId);
+
+  if (!task) {
+    return next(new AppError(404, "Task not found"));
+  }
+
+  // 1. Check if the task was created by the same user or not
+  if (!task.user.equals(userId)) {
+    return next(
+      new AppError(403, "You are not authorized to access this task."),
+    );
+  }
+
+  // 2. Let the user access the task
+  res.status(200).json({
+    status: "success",
+    data: {
+      task,
+    },
+  });
+});

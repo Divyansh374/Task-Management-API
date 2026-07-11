@@ -9,4 +9,6 @@ router
   .get(authController.protect, taskController.getAllTasks)
   .post(authController.protect, taskController.createTask);
 
+router.route("/:id").get(authController.protect, taskController.getTask);
+
 module.exports = router;
