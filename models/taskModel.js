@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const AppError = require("../utils/appError");
 
 const taskSchema = new mongoose.Schema(
   {
@@ -25,7 +26,18 @@ const taskSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    dueDate: Date,
+    dueDate: {
+      type: Date,
+      validate: {
+        validator: function (val) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          return val >= today;
+        },
+        message: "dueDate can't be smaller than today's date",
+      },
+    },
     completedAt: Date,
   },
   { timestamps: true },
