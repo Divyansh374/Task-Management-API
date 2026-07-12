@@ -15,4 +15,10 @@ router
   .patch(authController.protect, taskController.updateTask)
   .delete(authController.protect, taskController.deleteTask);
 
+router.post(
+  "/:id/complete",
+  authController.protect,
+  taskController.completeTask,
+);
+
 module.exports = router;
