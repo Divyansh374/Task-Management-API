@@ -126,3 +126,168 @@ exports.completeTask = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+exports.showDashboard = catchAsync(async (req, res, next) => {
+  const dashboard = await Task.aggregate([
+    {
+      $match: {
+        user: req.user._id,
+      },
+    },
+    {
+      $facet: {
+        overallStats: [
+          {
+            $group: {
+              _id: null,
+              totalTasks: {
+                $sum: 1,
+              },
+              completed: {
+                $sum: {
+                  $cond: [
+                    {
+                      $eq: ["$completed", true],
+                    },
+                    1,
+                    0,
+                  ],
+                },
+              },
+              pending: {
+                $sum: {
+                  $cond: [
+                    {
+                      $eq: ["$completed", true],
+                    },
+                    0,
+                    1,
+                  ],
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              totalTasks: 1,
+              completed: 1,
+              pending: 1,
+              completionRate: {
+                $round: [
+                  {
+                    $multiply: [
+                      { $divide: ["$completed", "$totalTasks"] },
+                      100,
+                    ],
+                  },
+                  2,
+                ],
+              },
+            },
+          },
+        ],
+        priorityStats: [
+          {
+            $group: {
+              _id: "$priority",
+              total: {
+                $sum: 1,
+              },
+            },
+          },
+        ],
+        upcomingDeadlines: [
+          {
+            $match: {
+              completed: false,
+              dueDate: { $gt: new Date() },
+            },
+          },
+          {
+            $sort: {
+              dueDate: 1,
+            },
+          },
+          {
+            $limit: 5,
+          },
+          {
+            $project: {
+              title: 1,
+              dueDate: 1,
+              priority: 1,
+              _id: 1,
+            },
+          },
+        ],
+        overdueTasks: [
+          {
+            $match: {
+              completed: false,
+              dueDate: { $lt: new Date() },
+            },
+          },
+          {
+            $sort: {
+              dueDate: 1,
+            },
+          },
+          {
+            $limit: 5,
+          },
+          {
+            $project: {
+              title: 1,
+              dueDate: 1,
+              priority: 1,
+              _id: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        overallStats: 1,
+        priorityStats: {
+          $map: {
+            input: "$priorityStats",
+            as: "priority",
+            in: {
+              _id: "$$priority._id",
+              total: "$$priority.total",
+              percentage: {
+                $round: [
+                  {
+                    $multiply: [
+                      {
+                        $divide: [
+                          "$$priority.total",
+                          {
+                            $getField: {
+                              field: "totalTasks",
+                              input: { $arrayElemAt: ["$overallStats", 0] },
+                            },
+                          },
+                        ],
+                      },
+                      100,
+                    ],
+                  },
+                  2,
+                ],
+              },
+            },
+          },
+        },
+        upcomingDeadlines: 1,
+        overdueTasks: 1,
+      },
+    },
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    data: dashboard,
+  });
+});
